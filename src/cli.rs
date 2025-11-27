@@ -4,9 +4,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::HashMap;
-use std::io::{Write, stdin, stdout};
+use std::io::{stdin, stdout, Write};
 
 use clap::{ArgMatches, FromArgMatches, Parser};
+use deploy::data::Data;
 
 use crate as deploy;
 
@@ -191,9 +192,9 @@ async fn get_deployment_data(
     supports_flakes: bool,
     flakes: &[deploy::DeployFlake<'_>],
     extra_build_args: &[String],
-) -> Result<Vec<deploy::data::Data>, GetDeploymentDataError> {
-    futures_util::stream::iter(flakes).then(|flake| async move {
-
+    nodes: Option<Vec<String>>,
+) -> Result<Vec<Data>, GetDeploymentDataError> {
+    let data: Result<Vec<Data>, GetDeploymentDataError> = futures_util::stream::iter(flakes).then(|flake| async move {
     info!("Evaluating flake in {}", flake.repo);
 
     let mut c = if supports_flakes {
@@ -203,11 +204,8 @@ async fn get_deployment_data(
     };
 
     if supports_flakes {
-        c.arg("eval")
-            .arg("--json")
-            .arg(format!("{}#deploy", flake.repo))
-            // We use --apply instead of --expr so that we don't have to deal with builtins.getFlake
-            .arg("--apply");
+        c.args(&["eval", "--json", &format!("{}#deploy", flake.repo), "--apply"]);
+
         match (&flake.node, &flake.profile) {
             (Some(node), Some(profile)) => {
                 // Ignore all nodes and all profiles but the one we're evaluating
@@ -248,13 +246,14 @@ async fn get_deployment_data(
             (None, Some(_)) => return Err(GetDeploymentDataError::ProfileNoNode),
         }
     } else {
-        c
-            .arg("--strict")
-            .arg("--read-write-mode")
-            .arg("--json")
-            .arg("--eval")
-            .arg("-E")
-            .arg(format!("let r = import {}/.; in if builtins.isFunction r then (r {{}}).deploy else r.deploy", flake.repo))
+        c.args(&[
+            "--strict",
+            "--read-write-mode",
+            "--json",
+            "--eval",
+            "-E",
+            &format!("let r = import {}/.; in if builtins.isFunction r then (r {{}}).deploy else r.deploy", flake.repo)
+        ])
     };
 
     c.args(extra_build_args);
@@ -275,9 +274,30 @@ async fn get_deployment_data(
     };
 
     let data_json = String::from_utf8(build_output.stdout)?;
+    let data: Data = serde_json::from_str(&data_json)?;
 
-    Ok(serde_json::from_str(&data_json)?)
-}).try_collect().await
+    Ok(data)
+}).try_collect().await;
+
+    if let Some(nodes) = nodes {
+        if nodes.is_empty() {
+            return data
+        }
+
+        data.map(|data| {
+            data.iter().map(|d| {
+                let mut node_data: HashMap<String, crate::data::Node> = d.nodes.clone();
+                node_data = node_data.into_iter().filter(|(_, n)| nodes.contains(&n.node_settings.hostname)).collect();
+
+                Data {
+                    generic_settings: d.generic_settings.clone(),
+                    nodes: node_data
+                }
+            }).collect()
+        })
+    } else {
+        data
+    }
 }
 
 #[derive(Serialize)]
@@ -414,14 +434,14 @@ pub enum RunDeployError {
 
 type ToDeploy<'a> = Vec<(
     &'a deploy::DeployFlake<'a>,
-    &'a deploy::data::Data,
+    &'a Data,
     (&'a str, &'a deploy::data::Node),
     (&'a str, &'a deploy::data::Profile),
 )>;
 
 async fn run_deploy(
     deploy_flakes: Vec<deploy::DeployFlake<'_>>,
-    data: Vec<deploy::data::Data>,
+    data: Vec<Data>,
     supports_flakes: bool,
     check_sigs: bool,
     interactive: bool,
@@ -758,7 +778,13 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
         }
     }
     let result_path = opts.result_path.as_deref();
-    let data = get_deployment_data(using_flakes, &deploy_flakes, &opts.extra_build_args).await?;
+    let data = get_deployment_data(
+        using_flakes,
+        &deploy_flakes,
+        &opts.extra_build_args,
+        opts.nodes,
+    )
+    .await?;
     run_deploy(
         deploy_flakes,
         data,

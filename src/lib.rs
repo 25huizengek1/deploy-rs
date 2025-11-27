@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use rnix::{SyntaxKind::*, types::*};
+use rnix::{types::*, SyntaxKind::*};
 
 use merge::Merge;
 
