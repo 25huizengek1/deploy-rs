@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::HashMap;
-use std::io::{stdin, stdout, Write};
+use std::io::{Write, stdin, stdout};
 
 use clap::{ArgMatches, FromArgMatches, Parser};
 
@@ -355,7 +355,9 @@ fn prompt_deployment(
 
     if !yn::yes(&s) {
         if yn::is_somewhat_yes(&s) {
-            info!("Sounds like you might want to continue, to be more clear please just say \"yes\". Do you want to deploy these profiles?");
+            info!(
+                "Sounds like you might want to continue, to be more clear please just say \"yes\". Do you want to deploy these profiles?"
+            );
             print!("> ");
 
             stdout()
@@ -472,7 +474,7 @@ async fn run_deploy(
                         let profile = match node.node_settings.profiles.get(profile_name) {
                             Some(x) => x,
                             None => {
-                                return Err(RunDeployError::ProfileNotFound(profile_name.clone()))
+                                return Err(RunDeployError::ProfileNotFound(profile_name.clone()));
                             }
                         };
 
@@ -503,7 +505,7 @@ async fn run_deploy(
                                 None => {
                                     return Err(RunDeployError::ProfileNotFound(
                                         profile_name.clone(),
-                                    ))
+                                    ));
                                 }
                             };
 
@@ -556,10 +558,14 @@ async fn run_deploy(
             .interactive_sudo
             .unwrap_or(false)
         {
-            warn!("Interactive sudo is enabled! Using a sudo password is less secure than correctly configured SSH keys.\nPlease use keys in production environments.");
+            warn!(
+                "Interactive sudo is enabled! Using a sudo password is less secure than correctly configured SSH keys.\nPlease use keys in production environments."
+            );
 
             if deploy_data.merged_settings.sudo.is_some() {
-                warn!("Custom sudo commands should be configured to accept password input from stdin when using the 'interactive sudo' option. Deployment may fail if the custom command ignores stdin.");
+                warn!(
+                    "Custom sudo commands should be configured to accept password input from stdin when using the 'interactive sudo' option. Deployment may fail if the custom command ignores stdin."
+                );
             } else {
                 // this configures sudo to hide the password prompt and accept input from stdin
                 // at the time of writing, deploy_defs.sudo defaults to 'sudo -u root' when using user=root and sshUser as non-root
@@ -736,7 +742,9 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
     let do_not_want_flakes = opts.file.is_some();
 
     if !supports_flakes {
-        warn!("A Nix version without flakes support was detected, support for this is work in progress");
+        warn!(
+            "A Nix version without flakes support was detected, support for this is work in progress"
+        );
     }
 
     if do_not_want_flakes {

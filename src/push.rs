@@ -30,8 +30,10 @@ pub enum PushProfileError {
              Did you forget to use deploy-rs#lib.<...>.activate.<...> on your profile path?"
     )]
     DeployRsActivateDoesntExist,
-    #[error("Activation script activate-rs does not exist in profile.\n\
-             Is there a mismatch in deploy-rs used in the flake you're deploying and deploy-rs command you're running?")]
+    #[error(
+        "Activation script activate-rs does not exist in profile.\n\
+             Is there a mismatch in deploy-rs used in the flake you're deploying and deploy-rs command you're running?"
+    )]
     ActivateRsDoesntExist,
     #[error("Failed to run Nix sign command: {0}")]
     Sign(std::io::Error),

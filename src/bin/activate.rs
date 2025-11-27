@@ -18,7 +18,7 @@ use std::time::Duration;
 use std::env;
 use std::path::{Path, PathBuf};
 
-use notify::{recommended_watcher, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{RecommendedWatcher, RecursiveMode, Watcher, recommended_watcher};
 
 use thiserror::Error;
 

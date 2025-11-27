@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use rnix::{types::*, SyntaxKind::*};
+use rnix::{SyntaxKind::*, types::*};
 
 use merge::Merge;
 
@@ -401,7 +401,7 @@ impl<'a> DeployData<'a> {
                     return Err(DeployDataDefsError::NoProfileUser(
                         self.profile_name.to_owned(),
                         self.node_name.to_owned(),
-                    ))
+                    ));
                 }
             },
         };
