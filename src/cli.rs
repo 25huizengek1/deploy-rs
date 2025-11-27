@@ -30,9 +30,9 @@ pub struct Opts {
     /// A list of flakes to deploy alternatively
     #[arg(long, group = "deploy")]
     targets: Option<Vec<String>>,
-    /// A list of hostnames to deploy to
+    /// A list of nodes to deploy to
     #[arg(long, group = "deploy")]
-    hostnames: Option<Vec<String>>,
+    nodes: Option<Vec<String>>,
     /// Treat targets as files instead of flakes
     #[clap(short, long)]
     file: Option<String>,
@@ -631,7 +631,6 @@ async fn run_deploy(
     // Rollbacks adhere to the global seeting to auto_rollback and secondary
     // the profile's configuration
     for (_, deploy_data, deploy_defs) in &parts {
-        // deploy_data.node.node_settings.hostname
         if let Err(e) =
             deploy::deploy::deploy_profile(deploy_data, deploy_defs, dry_activate, boot).await
         {
